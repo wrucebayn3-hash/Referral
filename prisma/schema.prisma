@@ -1,0 +1,182 @@
+generator client {
+  provider = "prisma-client-js"
+  previewFeatures = ["driverAdapters"]
+}
+
+datasource db {
+  provider = "sqlite"
+}
+
+model User {
+  id            String   @id @default(cuid())
+  name          String?
+  email         String   @unique
+  emailVerified DateTime?
+  image         String?
+  password      String?
+  role          String   @default("SEEKER") // SEEKER, POSTER, BOTH, ADMIN
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  profile       Profile?
+  postedJobs    Job[]         @relation("PostedJobs")
+  referralsSent ReferralRequest[] @relation("SentRequests")
+  referralsReceived ReferralRequest[] @relation("ReceivedRequests")
+  savedJobs     SavedJob[]
+  sentMessages  Message[]     @relation("SentMessages")
+  notifications Notification[]
+  accounts      Account[]
+  sessions      Session[]
+  adminActions  AdminAction[]
+  activityLogs  ActivityLog[]
+}
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String?
+  access_token      String?
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String?
+  session_state     String?
+  user              User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+}
+
+model Profile {
+  id           String   @id @default(cuid())
+  userId       String   @unique
+  bio          String?
+  phone        String?
+  location     String?
+  linkedinUrl  String?
+  portfolioUrl String?
+  resumeUrl    String?
+  profileImage String?
+  currentCompany String?
+  currentRole  String?
+  skills       String?  // JSON array stored as string
+  experience   String?  // JSON array
+  education    String?  // JSON array
+  preferredRoles String? // JSON array
+  completionPct Int     @default(0)
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+}
+
+model Job {
+  id             String   @id @default(cuid())
+  title          String
+  company        String
+  location       String
+  workMode       String   @default("ONSITE") // REMOTE, HYBRID, ONSITE
+  jobType        String   @default("FULLTIME") // FULLTIME, PARTTIME, CONTRACT, INTERNSHIP
+  experienceLevel String  @default("MID") // ENTRY, MID, SENIOR, LEAD, EXECUTIVE
+  description    String
+  requirements   String?
+  skills         String?  // JSON array
+  industry       String?
+  deadline       DateTime?
+  status         String   @default("ACTIVE") // ACTIVE, PAUSED, CLOSED, DRAFT
+  referralAvailable Boolean @default(true)
+  postedById     String
+  postedBy       User     @relation("PostedJobs", fields: [postedById], references: [id])
+  referralRequests ReferralRequest[]
+  savedBy        SavedJob[]
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+}
+
+model ReferralRequest {
+  id          String   @id @default(cuid())
+  jobId       String
+  seekerId    String
+  referrerId  String
+  status      String   @default("PENDING") // PENDING, ACCEPTED, REJECTED, REFERRED, CLOSED
+  message     String?
+  resumeUrl   String?
+  notes       String?
+  job         Job      @relation(fields: [jobId], references: [id])
+  seeker      User     @relation("SentRequests", fields: [seekerId], references: [id])
+  referrer    User     @relation("ReceivedRequests", fields: [referrerId], references: [id])
+  messages    Message[]
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model Message {
+  id        String   @id @default(cuid())
+  content   String
+  senderId  String
+  requestId String
+  sender    User     @relation("SentMessages", fields: [senderId], references: [id])
+  request   ReferralRequest @relation(fields: [requestId], references: [id])
+  createdAt DateTime @default(now())
+}
+
+model SavedJob {
+  id        String   @id @default(cuid())
+  userId    String
+  jobId     String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  job       Job      @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+
+  @@unique([userId, jobId])
+}
+
+model Notification {
+  id        String   @id @default(cuid())
+  userId    String
+  title     String
+  body      String
+  type      String   @default("INFO") // INFO, REQUEST, STATUS, MESSAGE, ADMIN
+  read      Boolean  @default(false)
+  link      String?
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+}
+
+model AdminAction {
+  id          String   @id @default(cuid())
+  adminId     String
+  targetType  String   // USER, JOB, REFERRAL
+  targetId    String
+  action      String   // APPROVE, REJECT, SUSPEND, DELETE, EDIT
+  reason      String?
+  admin       User     @relation(fields: [adminId], references: [id])
+  createdAt   DateTime @default(now())
+}
+
+model ActivityLog {
+  id        String   @id @default(cuid())
+  userId    String?
+  action    String
+  details   String?
+  ipAddress String?
+  user      User?    @relation(fields: [userId], references: [id])
+  createdAt DateTime @default(now())
+}

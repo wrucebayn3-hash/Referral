@@ -3,8 +3,10 @@ import { PrismaLibSql } from '@prisma/adapter-libsql'
 import bcrypt from 'bcryptjs'
 import path from 'path'
 
-const dbPath = path.join(process.cwd(), 'prisma/dev.db')
-const adapter = new PrismaLibSql({ url: `file:${dbPath}` })
+// Use DATABASE_URL if set, otherwise fall back to local dev.db
+const url = process.env.DATABASE_URL || `file:${path.join(process.cwd(), 'prisma/dev.db')}`
+const authToken = process.env.TURSO_AUTH_TOKEN
+const adapter = new PrismaLibSql({ url, authToken })
 const prisma = new PrismaClient({ adapter } as any)
 
 async function main() {

@@ -6,9 +6,11 @@ const globalForPrisma = globalThis as unknown as {
 }
 
 function createPrismaClient() {
-  // Use DATABASE_URL env var, or fall back to the known absolute path
-  const dbUrl = process.env.DATABASE_URL || 'file:/home/user/Referral/prisma/dev.db'
-  const adapter = new PrismaLibSql({ url: dbUrl })
+  const url = process.env.DATABASE_URL
+  if (!url) throw new Error('DATABASE_URL environment variable is required')
+
+  const authToken = process.env.TURSO_AUTH_TOKEN
+  const adapter = new PrismaLibSql({ url, authToken })
   return new PrismaClient({ adapter } as any)
 }
 
